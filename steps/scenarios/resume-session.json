@@ -1,0 +1,11 @@
+{
+  "id": "resume-session",
+  "runs": [
+    { "argv": ["Remember that my favorite color is blue."] },
+    { "argv": ["--resume", "What is my favorite color?"] }
+  ],
+  "turns": [
+    { "text": "Got it — your favorite color is blue." },
+    { "text": "Your favorite color is blue." }
+  ]
+}

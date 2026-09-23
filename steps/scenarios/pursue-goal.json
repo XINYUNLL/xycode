@@ -1,0 +1,46 @@
+{
+  "id": "pursue-goal",
+  "runs": [
+    {
+      "argv": [
+        "--goal",
+        "done.txt exists",
+        "Create done.txt with ok."
+      ]
+    }
+  ],
+  "tracks": {
+    "main": {
+      "turns": [
+        {
+          "text": "Working on it."
+        },
+        {
+          "tools": [
+            {
+              "name": "write_file",
+              "input": {
+                "file_path": "done.txt",
+                "content": "ok"
+              }
+            }
+          ]
+        },
+        {
+          "text": "Created done.txt."
+        }
+      ]
+    },
+    "goal": {
+      "match": "goal evaluator",
+      "turns": [
+        {
+          "text": "NOT_MET: done.txt has not been created yet."
+        },
+        {
+          "text": "MET"
+        }
+      ]
+    }
+  }
+}

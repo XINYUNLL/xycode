@@ -1,0 +1,46 @@
+{
+  "id": "delegate-to-subagent",
+  "prompt": "Use a sub-agent to find out what greeting.txt says.",
+  "setup": {
+    "files": {
+      "greeting.txt": "hello from the subagent demo"
+    }
+  },
+  "tracks": {
+    "main": {
+      "turns": [
+        {
+          "tools": [
+            {
+              "name": "agent",
+              "input": {
+                "task": "Read greeting.txt and report its contents."
+              }
+            }
+          ]
+        },
+        {
+          "text": "The sub-agent reports greeting.txt says: hello from the subagent demo."
+        }
+      ]
+    },
+    "subagent": {
+      "match": "explore sub-agent",
+      "turns": [
+        {
+          "tools": [
+            {
+              "name": "read_file",
+              "input": {
+                "file_path": "greeting.txt"
+              }
+            }
+          ]
+        },
+        {
+          "text": "greeting.txt contains: hello from the subagent demo"
+        }
+      ]
+    }
+  }
+}

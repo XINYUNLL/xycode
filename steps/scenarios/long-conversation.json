@@ -1,0 +1,58 @@
+{
+  "id": "long-conversation",
+  "prompt": "Read a.txt, then b.txt, then c.txt, then summarize.",
+  "setup": {
+    "files": {
+      "a.txt": "alpha",
+      "b.txt": "beta",
+      "c.txt": "gamma"
+    }
+  },
+  "tracks": {
+    "main": {
+      "turns": [
+        {
+          "tools": [
+            {
+              "name": "read_file",
+              "input": {
+                "file_path": "a.txt"
+              }
+            }
+          ]
+        },
+        {
+          "tools": [
+            {
+              "name": "read_file",
+              "input": {
+                "file_path": "b.txt"
+              }
+            }
+          ]
+        },
+        {
+          "tools": [
+            {
+              "name": "read_file",
+              "input": {
+                "file_path": "c.txt"
+              }
+            }
+          ]
+        },
+        {
+          "text": "All three read: alpha, beta, gamma."
+        }
+      ]
+    },
+    "compact": {
+      "match": "Summarize the conversation",
+      "turns": [
+        {
+          "text": "So far the user asked to read a.txt and b.txt; both were read."
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  "id": "use-mcp-tool",
+  "prompt": "Use the add tool to compute 17 + 25.",
+  "turns": [
+    {
+      "tools": [
+        {
+          "name": "mcp__demo__add",
+          "input": {
+            "a": 17,
+            "b": 25
+          }
+        }
+      ]
+    },
+    {
+      "text": "17 + 25 = 42."
+    }
+  ]
+}

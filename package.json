@@ -1,0 +1,50 @@
+{
+  "name": "xycode",
+  "version": "0.1.0",
+  "description": "A from-scratch coding agent (based on claude-code-from-scratch), extended with original features",
+  "type": "module",
+  "bin": {
+    "xycode": "./dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/cli.js",
+    "dev": "tsc && node dist/cli.js",
+    "test:unit": "node -e \"require('node:fs').rmSync('dist-test',{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test dist-test/test/*.test.js",
+    "test:integration": "tsc && node --test test/integration/*.test.mjs",
+    "test:integration:py": "tsc && node --test test/integration/python-parity.test.mjs",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:py": "python3 -B -m unittest discover -s python/tests -p \"test_*.py\"",
+    "check": "npm run test && npm run test:py",
+    "check:full": "npm run check && npm run test:integration:py",
+    "steps:build": "node steps/build.mjs",
+    "step": "node steps/run.mjs",
+    "steps:test": "node steps/test.mjs",
+    "steps:lint": "node steps/lint-markers.mjs",
+    "steps:selftest": "node steps/mock-anthropic.selftest.mjs",
+    "steps:selfcheck": "node steps/test.selfcheck.mjs",
+    "steps:selftest:py": ".venv/bin/python steps/mock_anthropic.selftest.py",
+    "steps:docs": "node steps/docs-sync.mjs",
+    "steps:docs:check": "node steps/docs-sync.mjs --check",
+    "steps:ci": "node steps/lint-markers.mjs && node steps/mock-anthropic.selftest.mjs && .venv/bin/python steps/mock_anthropic.selftest.py && node steps/test.mjs && node steps/test.selfcheck.mjs && node steps/docs-sync.mjs --check",
+    "test:live": "tsc && node --test test/integration/*.livetest.mjs"
+  },
+  "keywords": [
+    "claude-code",
+    "coding-agent",
+    "cli",
+    "ai",
+    "llm"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.52.0",
+    "chalk": "^5.4.1",
+    "glob": "^11.0.1",
+    "openai": "^6.33.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  }
+}

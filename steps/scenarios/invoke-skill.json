@@ -1,0 +1,20 @@
+{
+  "id": "invoke-skill",
+  "runs": [
+    {
+      "argv": [
+        "/commit"
+      ]
+    }
+  ],
+  "setup": {
+    "files": {
+      ".mini-skills/commit.md": "Read the git diff and write a concise commit message."
+    }
+  },
+  "turns": [
+    {
+      "text": "feat: add the new thing"
+    }
+  ]
+}

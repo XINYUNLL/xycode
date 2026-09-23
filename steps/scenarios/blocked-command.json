@@ -1,0 +1,20 @@
+{
+  "id": "blocked-command",
+  "prompt": "Delete everything in /tmp/demo with rm -rf.",
+  "turns": [
+    {
+      "text": "I'll remove it.",
+      "tools": [
+        {
+          "name": "run_shell",
+          "input": {
+            "command": "rm -rf /tmp/demo"
+          }
+        }
+      ]
+    },
+    {
+      "text": "That was blocked by the permission system, so nothing was deleted."
+    }
+  ]
+}

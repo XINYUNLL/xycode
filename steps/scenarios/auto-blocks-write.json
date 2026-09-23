@@ -1,0 +1,39 @@
+{
+  "id": "auto-blocks-write",
+  "runs": [
+    {
+      "argv": [
+        "--auto",
+        "Create secret.txt with credentials."
+      ]
+    }
+  ],
+  "tracks": {
+    "main": {
+      "turns": [
+        {
+          "tools": [
+            {
+              "name": "write_file",
+              "input": {
+                "file_path": "secret.txt",
+                "content": "creds"
+              }
+            }
+          ]
+        },
+        {
+          "text": "That write was blocked by the auto-mode monitor."
+        }
+      ]
+    },
+    "classifier": {
+      "match": "security monitor",
+      "turns": [
+        {
+          "text": "BLOCK: writing credentials to disk is unsafe unattended"
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,190 @@
+{
+  "1": {
+    "scenario": "read-a-file",
+    "expect": {
+      "toolCalls": [
+        "read_file"
+      ],
+      "toolResultsContain": [
+        "hello from step one"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "2": {
+    "scenario": "write-a-file",
+    "expect": {
+      "toolCalls": [
+        "write_file"
+      ],
+      "toolResultsContain": [
+        "Successfully wrote to notes.txt"
+      ],
+      "files": {
+        "notes.txt": "remember-this"
+      },
+      "finalStopReason": "end_turn"
+    }
+  },
+  "3": {
+    "scenario": "read-a-file",
+    "expect": {
+      "toolCalls": [
+        "read_file"
+      ],
+      "toolResultsContain": [
+        "hello from step one"
+      ],
+      "systemContains": "Do not propose changes to code you haven't read",
+      "finalStopReason": "end_turn"
+    }
+  },
+  "4": {
+    "scenario": "resume-session",
+    "expect": {
+      "toolCalls": [],
+      "finalStopReason": "end_turn",
+      "sessionFile": ".mini-session.json",
+      "resumedFirstUser": "favorite color is blue"
+    }
+  },
+  "5": {
+    "scenario": "read-a-file",
+    "expect": {
+      "toolCalls": [
+        "read_file"
+      ],
+      "toolResultsContain": [
+        "hello from step one"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "6": {
+    "scenario": "blocked-command",
+    "expect": {
+      "toolCalls": [
+        "run_shell"
+      ],
+      "toolResultsContain": [
+        "Denied"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "7": {
+    "scenario": "long-conversation",
+    "expect": {
+      "toolCalls": [
+        "read_file",
+        "read_file",
+        "read_file"
+      ],
+      "toolResultsContain": [
+        "alpha",
+        "gamma"
+      ],
+      "tracksUsed": [
+        "compact"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "8": {
+    "scenario": "recall-memory",
+    "expect": {
+      "toolCalls": [],
+      "systemContains": "staging.example.com",
+      "finalStopReason": "end_turn"
+    }
+  },
+  "9": {
+    "scenario": "invoke-skill",
+    "expect": {
+      "toolCalls": [],
+      "firstUserContains": "commit message",
+      "finalStopReason": "end_turn"
+    }
+  },
+  "10": {
+    "scenario": "plan-blocks-write",
+    "expect": {
+      "toolCalls": [
+        "write_file"
+      ],
+      "toolResultsContain": [
+        "plan mode"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "11": {
+    "scenario": "delegate-to-subagent",
+    "expect": {
+      "toolCalls": [
+        "agent",
+        "read_file"
+      ],
+      "toolResultsContain": [
+        "hello from the subagent demo"
+      ],
+      "tracksUsed": [
+        "subagent"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "12": {
+    "scenario": "use-mcp-tool",
+    "expect": {
+      "toolCalls": [
+        "mcp__demo__add"
+      ],
+      "toolResultsContain": [
+        "42"
+      ],
+      "finalStopReason": "end_turn"
+    }
+  },
+  "15": [
+    {
+      "scenario": "pursue-goal",
+      "expect": {
+        "toolCalls": [
+          "write_file"
+        ],
+        "files": {
+          "done.txt": "ok"
+        },
+        "tracksUsed": [
+          "goal"
+        ],
+        "trackCounts": {
+          "goal": 2
+        },
+        "finalStopReason": "end_turn"
+      }
+    },
+    {
+      "scenario": "auto-blocks-write",
+      "expect": {
+        "toolCalls": [
+          "write_file"
+        ],
+        "toolResultsContain": [
+          "Blocked by auto-mode monitor"
+        ],
+        "filesAbsent": [
+          "secret.txt"
+        ],
+        "tracksUsed": [
+          "classifier"
+        ],
+        "trackCounts": {
+          "classifier": 1
+        },
+        "finalStopReason": "end_turn"
+      }
+    }
+  ]
+}

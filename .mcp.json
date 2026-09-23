@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "test": {
+      "command": "node",
+      "args": ["test/mcp-server.cjs"]
+    }
+  }
+}
