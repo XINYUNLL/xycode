@@ -7,6 +7,10 @@
     "github": {
       "command": "node",
       "args": ["mcp/github-server.mjs"]
+    },
+    "memory": {
+      "command": "node",
+      "args": ["mcp/memory-server.mjs"]
     }
   }
 }
