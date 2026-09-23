@@ -3,6 +3,10 @@
     "test": {
       "command": "node",
       "args": ["test/mcp-server.cjs"]
+    },
+    "github": {
+      "command": "node",
+      "args": ["mcp/github-server.mjs"]
     }
   }
 }
