@@ -1,0 +1,9 @@
+{
+  "id": "task_010",
+  "name": "数据处理流水线",
+  "prompt": "读 data.csv（两列：name,quantity），统计每种水果的总数量，按总数量从大到小排序，把结果写到 result.txt，每行格式 '名称:总数'（例如 banana:6）。",
+  "verify": "require('fs').readFileSync('result.txt','utf8').trim() === 'banana:6\\napple:5\\ncherry:1'",
+  "fixtures": {
+    "data.csv": "name,quantity\napple,3\nbanana,5\napple,2\ncherry,1\nbanana,1\n"
+  }
+}

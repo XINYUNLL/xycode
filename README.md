@@ -31,6 +31,7 @@
 - **`.env` 自动加载**：启动时自动读 `.env`（先查当前目录，再查程序所在目录），且不覆盖已设置的环境变量。原版的 `.env.example` 形同虚设——编译出来的 CLI 根本不读它。
 - **GitHub 发布 MCP**：新增 `create_repo` / `push_current_repo` 两个 MCP 工具（`mcp/github-server.mjs`，裸 JSON-RPC 实现、零依赖），让 agent 能一键建仓库、推送项目到 GitHub。
 - **跨会话记忆 MCP**：新增 `add_note` / `list_notes` 两个 MCP 工具（`mcp/memory-server.mjs`，裸 JSON-RPC、零依赖），让 agent 能跨会话记住用户偏好、结论和待办。
+- **自建 eval harness**：迷你 SWE-bench，10 道题、确定性判卷（Node 布尔表达式，不靠 LLM 当裁判），采集解决率 / 轮数 / 成本（`npm run eval`）。
 
 ### 修复（Windows 兼容）
 
@@ -40,7 +41,6 @@
 ### Roadmap
 
 - [ ] Critic 评审模式：主 agent 改完自动送审，用 eval 量化质量提升
-- [ ] 自建 eval harness 接入
 
 ## 快速开始
 

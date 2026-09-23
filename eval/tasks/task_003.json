@@ -1,0 +1,6 @@
+{
+  "id": "task_003",
+  "name": "创建并过滤数据",
+  "prompt": "在当前目录创建一个 names.txt，包含这三行：Alice、Bob、Charlie（每行一个名字，不要空行）。然后创建一个 names_a.txt，只包含以字母 A 开头的名字（每行一个）。",
+  "verify": "require('fs').readFileSync('names_a.txt','utf8').trim() === 'Alice'"
+}

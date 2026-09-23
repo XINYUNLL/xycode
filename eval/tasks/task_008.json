@@ -1,0 +1,9 @@
+{
+  "id": "task_008",
+  "name": "实现 LRU 缓存（O(1)）",
+  "prompt": "实现 lru.js，导出 LRUCache 类：构造参数 capacity；get(key) 未命中返回 -1；put(key,value) 容量满时按 LRU 淘汰最久未用的；get/put 都要 O(1)。写完后运行 node test.js 应输出 'ALL PASS'，不要修改 test.js。",
+  "verify": "require('child_process').execSync('node test.js',{encoding:'utf8'}).trim() === 'ALL PASS'",
+  "fixtures": {
+    "test.js": "const { LRUCache } = require('./lru.js')\nconst c = new LRUCache(2)\nc.put(1, 1)\nc.put(2, 2)\nconst r1 = c.get(1) === 1\nc.put(3, 3)\nconst r2 = c.get(2) === -1\nc.put(4, 4)\nconst r3 = c.get(1) === -1\nconst r4 = c.get(3) === 3\nconst r5 = c.get(4) === 4\nconsole.log([r1, r2, r3, r4, r5].every(Boolean) ? 'ALL PASS' : 'FAIL')\n"
+  }
+}

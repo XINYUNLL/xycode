@@ -1,0 +1,6 @@
+{
+  "id": "task_002",
+  "name": "写脚本并验证输出",
+  "prompt": "写一个名为 add.sh 的脚本，接收两个整数命令行参数，输出它们的和（只输出数字，不要别的）。写完自己运行 bash add.sh 2 3 确认结果是 5。",
+  "verify": "require('child_process').execSync('bash add.sh 2 3',{encoding:'utf8'}).trim() === '5'"
+}

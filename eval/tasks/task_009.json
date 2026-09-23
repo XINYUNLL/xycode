@@ -1,0 +1,10 @@
+{
+  "id": "task_009",
+  "name": "修复 bug：运算符优先级",
+  "prompt": "运行 main.js 应该输出 2.5，但现在输出不对。bug 在 stats.js 里，找到并修复（不要改 main.js）。",
+  "verify": "require('child_process').execSync('node main.js',{encoding:'utf8'}).trim() === '2.5'",
+  "fixtures": {
+    "main.js": "const { avg } = require('./stats.js')\nconsole.log(avg([1, 2, 3, 4]))\n",
+    "stats.js": "function avg(arr) {\n  let sum = 0\n  for (let i = 0; i < arr.length; i++) {\n    sum += arr[i]\n  }\n  return sum / arr.length - 1\n}\nmodule.exports = { avg }\n"
+  }
+}

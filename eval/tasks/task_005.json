@@ -1,0 +1,9 @@
+{
+  "id": "task_005",
+  "name": "修复 bug：求和循环的边界",
+  "prompt": "当前目录的 sum.js 里，sumTo(10) 应该输出 55，但它现在输出 45。读代码找出 bug 并修复，不要改动函数名和 console.log。",
+  "verify": "require('child_process').execSync('node sum.js',{encoding:'utf8'}).trim() === '55'",
+  "fixtures": {
+    "sum.js": "function sumTo(n) {\n  let total = 0;\n  for (let i = 1; i < n; i++) {\n    total += i;\n  }\n  return total;\n}\nconsole.log(sumTo(10));\n"
+  }
+}

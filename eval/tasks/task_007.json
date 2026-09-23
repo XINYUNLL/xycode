@@ -1,0 +1,6 @@
+{
+  "id": "task_007",
+  "name": "实现算法：斐波那契数列",
+  "prompt": "写一个 fib.js，定义函数 fib(n) 返回第 n 个斐波那契数（fib(0)=0，fib(1)=1），并在文件最后 console.log(fib(10))。实现方式不限（递归或迭代都行）。",
+  "verify": "require('child_process').execSync('node fib.js',{encoding:'utf8'}).trim() === '55'"
+}

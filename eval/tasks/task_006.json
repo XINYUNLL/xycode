@@ -1,0 +1,9 @@
+{
+  "id": "task_006",
+  "name": "修复 bug：字符串反转",
+  "prompt": "当前目录的 reverse.js 里，reverse('hello') 应该输出 'olleh'，但它现在输出 'hello'。读代码找出 bug 并修复，不要改动函数名和 console.log。",
+  "verify": "require('child_process').execSync('node reverse.js',{encoding:'utf8'}).trim() === 'olleh'",
+  "fixtures": {
+    "reverse.js": "function reverse(s) {\n  let result = '';\n  for (let i = 0; i < s.length; i++) {\n    result += s[i];\n  }\n  return result;\n}\nconsole.log(reverse('hello'));\n"
+  }
+}

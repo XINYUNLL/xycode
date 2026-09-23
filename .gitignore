@@ -4,6 +4,8 @@ dist-test/
 .env
 __pycache__/
 steps/dist/
+eval/.workspace/
+eval/results.jsonl
 
 # mini-claude demo artifacts (sessions/memory/skills the steps demos create)
 .mini-session.json

@@ -551,6 +551,16 @@ export class Agent {
 
   // ─── Budget control ────────────────────────────────────────
 
+  /** 当前会话已消耗的轮数（供 eval / 自动化以程序方式读取）。 */
+  get numTurns(): number {
+    return this.currentTurns;
+  }
+
+  /** 估算成本（美元），与 showCost() 同口径。 */
+  get totalCostUsd(): number {
+    return this.getCurrentCostUsd();
+  }
+
   private getCurrentCostUsd(): number {
     const M = 1_000_000;
     // Base input $3/Mtok. Cache read is 0.1x, cache write is 1.25x — the fixed

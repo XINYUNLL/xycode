@@ -1,0 +1,6 @@
+{
+  "id": "task_001",
+  "name": "创建指定内容的文件",
+  "prompt": "在当前目录创建一个名为 hello.txt 的文件，内容恰好是 hello world（没有引号、没有换行、没有多余空格）。",
+  "verify": "require('fs').readFileSync('hello.txt','utf8').trim() === 'hello world'"
+}

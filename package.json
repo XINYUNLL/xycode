@@ -10,6 +10,7 @@
     "build": "tsc",
     "start": "node dist/cli.js",
     "dev": "tsc && node dist/cli.js",
+    "eval": "npm run build && node eval/runner.mjs",
     "test:unit": "node -e \"require('node:fs').rmSync('dist-test',{recursive:true,force:true})\" && tsc -p tsconfig.test.json && node --test dist-test/test/*.test.js",
     "test:integration": "tsc && node --test test/integration/*.test.mjs",
     "test:integration:py": "tsc && node --test test/integration/python-parity.test.mjs",
