@@ -1,0 +1,5 @@
+{
+  "id": "task_014",
+  "name": "修复 CSV 解析器 bug",
+  "prompt": "当前目录有个 csv.js，实现了 CSV 解析函数 parseCSV。它有一个 bug：某些合法的 CSV 输入会被解析错。请找出并修复这个 bug，让 parseCSV 能正确处理所有合法 CSV（包括字段里带引号、逗号、换行的情况）。不要改导出方式（module.exports = parseCSV）。"
+}

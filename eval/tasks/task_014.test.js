@@ -1,0 +1,10 @@
+const assert = require('assert')
+const parseCSV = require('./csv.js')
+
+assert.deepStrictEqual(parseCSV('a,b,c'), [['a', 'b', 'c']])
+assert.deepStrictEqual(parseCSV('"a,b",c'), [['a,b', 'c']])
+assert.deepStrictEqual(parseCSV('"he said ""hi"""'), [['he said "hi"']])
+assert.deepStrictEqual(parseCSV('"x""y"'), [['x"y']])
+assert.deepStrictEqual(parseCSV('"line1\nline2",z'), [['line1\nline2', 'z']])
+assert.deepStrictEqual(parseCSV('"a",,"b"'), [['a', '', 'b']])
+console.log('OK: csv cases')

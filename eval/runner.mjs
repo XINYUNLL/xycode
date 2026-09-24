@@ -12,6 +12,7 @@ import {
   readFileSync,
   readdirSync,
   rmSync,
+  statSync,
   writeFileSync,
 } from 'node:fs'
 import { join, dirname } from 'node:path'
@@ -101,6 +102,13 @@ async function main() {
     writeFileSync(join(ws, 'package.json'), JSON.stringify({ type: 'commonjs' }))
     for (const [name, content] of Object.entries(task.fixtures ?? {})) {
       writeFileSync(join(ws, name), content)
+    }
+    // 目录式 fixtures：eval/tasks/<id>/ 下的文件原样拷进工作区（写中型模块更方便）
+    const fixtureDir = join(TASKS_DIR, task.id)
+    if (existsSync(fixtureDir) && statSync(fixtureDir).isDirectory()) {
+      for (const f of readdirSync(fixtureDir)) {
+        writeFileSync(join(ws, f), readFileSync(join(fixtureDir, f)))
+      }
     }
 
     console.log(`── ${task.id}｜${task.name}`)

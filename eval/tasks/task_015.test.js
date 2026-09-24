@@ -1,0 +1,10 @@
+const assert = require('assert')
+const reverse = require('./reverse.js')
+
+assert.strictEqual(reverse('abc'), 'cba')
+assert.strictEqual(reverse(''), '')
+assert.strictEqual(reverse('a b c'), 'c b a')
+assert.strictEqual(reverse('😀'), '😀')
+assert.strictEqual(reverse('a😀b'), 'b😀a')
+assert.strictEqual(reverse('🎉🚀✨'), '✨🚀🎉')
+console.log('OK: reverse cases')

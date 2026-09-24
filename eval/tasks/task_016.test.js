@@ -1,0 +1,12 @@
+const assert = require('assert')
+const romanToInt = require('./roman.js')
+
+assert.strictEqual(romanToInt('III'), 3)
+assert.strictEqual(romanToInt('IV'), 4)
+assert.strictEqual(romanToInt('IX'), 9)
+assert.strictEqual(romanToInt('LVIII'), 58)
+assert.strictEqual(romanToInt('MCMXCIV'), 1994)
+assert.strictEqual(romanToInt('XLII'), 42)
+assert.strictEqual(romanToInt('CDXLIV'), 444)
+assert.strictEqual(romanToInt('CMXCIX'), 999)
+console.log('OK: roman cases')

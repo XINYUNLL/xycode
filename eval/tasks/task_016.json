@@ -1,0 +1,5 @@
+{
+  "id": "task_016",
+  "name": "修复罗马数字转换 bug",
+  "prompt": "当前目录有个 roman.js，实现了罗马数字转整数的函数 romanToInt。它有一个 bug：某些罗马数字会转错。请找出并修复这个 bug，让 romanToInt 正确处理所有合法罗马数字。不要改导出方式（module.exports = romanToInt）。"
+}

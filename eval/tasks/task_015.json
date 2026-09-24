@@ -1,0 +1,5 @@
+{
+  "id": "task_015",
+  "name": "修复字符串反转 bug",
+  "prompt": "当前目录有个 reverse.js，实现了字符串反转函数 reverse。它有一个 bug：反转某些字符串时结果会乱码。请找出并修复这个 bug，让 reverse 对任意字符串都能正确反转（包括 emoji 等特殊字符）。不要改导出方式（module.exports = reverse）。"
+}
