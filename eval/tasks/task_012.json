@@ -1,0 +1,5 @@
+{
+  "id": "task_012",
+  "name": "实现迷你正则引擎",
+  "prompt": "在当前目录创建 regex.js，用 CommonJS 导出 match 函数（module.exports = match）。match(pattern, str) 判断字符串 str 是否【整体】匹配 pattern（从头到尾完全匹配），返回布尔值。要求从零手写（禁止用 RegExp 构造、test、match 等内置正则）。需要支持：字面字符、点号 .（匹配任意单字符）、星号 *（前一字符零次或多次）、加号 +（一次或多次）、问号 ?（零次或一次）、字符类 [abc] 与取反 [^abc]、锚点 ^ 和 $。"
+}

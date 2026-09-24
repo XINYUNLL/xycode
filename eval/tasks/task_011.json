@@ -1,0 +1,5 @@
+{
+  "id": "task_011",
+  "name": "实现 JSON 解析器",
+  "prompt": "在当前目录创建 json-parser.js，用 CommonJS 导出 parse 函数（module.exports = parse）。parse 接收一个 JSON 字符串，返回解析后的 JavaScript 值。要求从零手写（禁止用 JSON.parse）。需要支持：对象、数组、字符串（含换行、制表符、双引号、反斜杠、unicode 等转义）、数字（整数、小数、负数、科学计数法）、布尔值、null、任意嵌套。"
+}

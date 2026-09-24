@@ -63,6 +63,21 @@ function runVerify(verify, cwd) {
   }
 }
 
+// 测试脚本判卷：把脚本写到工作区再跑（agent 看不到，只在判卷时生成），
+// 脚本 exit 0 = 过，非 0 = 挂。适合实现类任务（多断言、多边界条件）。
+function runTest(testScript, cwd) {
+  const file = join(cwd, '_eval_verify.js')
+  writeFileSync(file, testScript)
+  try {
+    execFileSync(process.execPath, [file], { cwd, timeout: 30_000, encoding: 'utf8' })
+    return 0
+  } catch (e) {
+    return e.status ?? -1
+  } finally {
+    rmSync(file, { force: true })
+  }
+}
+
 async function main() {
   const filter = process.argv.slice(2)
   const tasks = loadTasks(filter)
@@ -104,7 +119,10 @@ async function main() {
     await agent.close()
     process.chdir(rootCwd)
 
-    const verifyExitCode = runVerify(task.verify, ws)
+    const testFile = join(TASKS_DIR, `${task.id}.test.js`)
+    const verifyExitCode = existsSync(testFile)
+      ? runTest(readFileSync(testFile, 'utf8'), ws)
+      : runVerify(task.verify, ws)
     const pass = verifyExitCode === 0
 
     const record = { taskId: task.id, taskName: task.name, pass, verifyExitCode, numTurns, totalCostUsd }

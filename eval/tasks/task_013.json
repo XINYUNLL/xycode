@@ -1,0 +1,5 @@
+{
+  "id": "task_013",
+  "name": "实现模板引擎",
+  "prompt": "在当前目录创建 template.js，用 CommonJS 导出 render 函数（module.exports = render）。render(template, data) 接收模板字符串和 data 对象，返回渲染后的字符串。需要支持：变量插值 {{ name }}（含深层路径如 {{ user.name }}）、条件块 {{#if cond}}...{{/if}}（cond 为 falsy 时输出空字符串）、循环块 {{#each items}}...{{/each}}（循环体内 {{this}} 表示当前项，{{this.xxx}} 表示当前项的属性）。不存在的变量输出空字符串。"
+}

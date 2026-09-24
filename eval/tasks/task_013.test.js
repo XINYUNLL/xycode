@@ -1,0 +1,15 @@
+const assert = require('assert')
+const mod = require('./template.js')
+const render = typeof mod === 'function' ? mod : mod.render
+
+assert.strictEqual(render('Hello {{name}}!', { name: 'World' }), 'Hello World!')
+assert.strictEqual(render('{{a}}+{{b}}', { a: 1, b: 2 }), '1+2')
+assert.strictEqual(render('{{user.name}}', { user: { name: 'Bob' } }), 'Bob')
+assert.strictEqual(render('{{missing}}', {}), '')
+assert.strictEqual(render('{{#if ok}}yes{{/if}}', { ok: true }), 'yes')
+assert.strictEqual(render('{{#if ok}}yes{{/if}}', { ok: false }), '')
+assert.strictEqual(render('{{#each items}}[{{this}}]{{/each}}', { items: ['a', 'b', 'c'] }), '[a][b][c]')
+assert.strictEqual(render('{{#each users}}{{this.name}};{{/each}}', { users: [{ name: 'a' }, { name: 'b' }] }), 'a;b;')
+assert.strictEqual(render('{{#if user}}{{user.name}}{{/if}}', { user: { name: 'Bob' } }), 'Bob')
+assert.strictEqual(render('{{#if user}}{{user.name}}{{/if}}', {}), '')
+console.log('OK: template cases')
