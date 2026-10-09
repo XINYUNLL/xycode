@@ -37,6 +37,7 @@ import {
 import * as readline from "readline";
 import { randomUUID } from "crypto";
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "fs";
+import { execFileSync } from "child_process";
 import { join } from "path";
 import { homedir } from "os";
 
@@ -152,6 +153,12 @@ const VERIFY_PROMPT =
   "changes are correct. If a test fails, fix the code from the error and " +
   "re-run until it passes. If the project has no runnable tests, say so explicitly.";
 
+// System prompt for the Critic sub-agent (read-only reviewer).
+const CRITIC_SYSTEM_PROMPT =
+  "You are a meticulous senior code reviewer. Review code changes for bugs, " +
+  "edge cases, correctness issues, and missing error handling. Be concrete — " +
+  'point to exact lines and explain why. If the change is correct, reply with exactly "APPROVED".';
+
 // ─── Agent ───────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -204,6 +211,10 @@ export class Agent {
   // it. If the model finishes a turn while dirty, we nudge it to verify.
   private pendingVerification = false;
   private verificationNudges = 0;
+
+  // Critic self-review: after edits are verified, fork a read-only reviewer.
+  private pendingCritique = false;
+  private critiqueRounds = 0;
 
   // /goal — session-scoped Stop-hook condition, pursued across turns
   private activeGoal: {
@@ -1635,6 +1646,49 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
     }
   }
 
+  // ─── Critic self-review ───────────────────────────────────────
+  // Fork a read-only reviewer sub-agent to critique the current git diff.
+  // Returns the review text, or null if there is nothing to review.
+  private async runCritic(task: string): Promise<string | null> {
+    let diff = "";
+    try {
+      diff = execFileSync("git", ["diff"], {
+        cwd: process.cwd(),
+        encoding: "utf8",
+        maxBuffer: 10 * 1024 * 1024,
+      });
+    } catch {
+      return null; // not a git repo (or git failed) — nothing to review
+    }
+    if (!diff.trim()) return null;
+
+    const prompt =
+      `Task:\n${task}\n\nCode change (git diff):\n` +
+      "```diff\n" + diff + "\n```\n\n" +
+      'Review the change. List concrete issues (bugs, edge cases, correctness). If correct, reply "APPROVED".';
+
+    printSubAgentStart("critic", "code review");
+    const critic = new Agent({
+      model: this.model,
+      isSubAgent: true,
+      permissionMode: "bypassPermissions",
+      customSystemPrompt: CRITIC_SYSTEM_PROMPT,
+      customTools: toolDefinitions.filter((t) =>
+        ["read_file", "list_files", "grep_search"].includes(t.name)
+      ),
+    });
+    try {
+      const result = await critic.runOnce(prompt);
+      this.totalInputTokens += result.tokens.input;
+      this.totalOutputTokens += result.tokens.output;
+      printSubAgentEnd("critic", "code review");
+      return result.text || null;
+    } catch (e: any) {
+      printSubAgentEnd("critic", "code review");
+      return null;
+    }
+  }
+
   // ─── Anthropic backend ───────────────────────────────────────
 
   // Push a user message, prepending the CLAUDE.md/date <system-reminder> when
@@ -1669,6 +1723,8 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
   private async chatAnthropic(userMessage: string): Promise<void> {
     this.pendingVerification = false;
     this.verificationNudges = 0;
+    this.pendingCritique = false;
+    this.critiqueRounds = 0;
     this.pushAnthropicUserMessage(userMessage);
     // Auto-compact at turn boundary only — the last message is now plain
     // user text, so the slice in compactAnthropic won't sever a
@@ -1750,6 +1806,21 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
           this.anthropicMessages.push({ role: "user", content: VERIFY_PROMPT });
           continue;
         }
+        // Critic self-review: after edits are verified (or no tests exist),
+        // fork a read-only reviewer. If it finds issues, feed them back for
+        // another pass. Capped at one round to keep cost bounded.
+        if (this.pendingCritique && this.critiqueRounds < 1 && !this.isSubAgent) {
+          this.pendingCritique = false;
+          this.critiqueRounds++;
+          const review = await this.runCritic(userMessage);
+          if (review && !/^\s*APPROVED/i.test(review)) {
+            this.anthropicMessages.push({
+              role: "user",
+              content: `A code review found these issues with your changes:\n\n${review}\n\nPlease fix them, then re-run the relevant tests.`,
+            });
+            continue;
+          }
+        }
         if (!this.isSubAgent) {
           printCost(this.totalInputTokens, this.totalOutputTokens, this.totalCacheReadTokens, this.totalCacheCreationTokens);
         }
@@ -1823,6 +1894,7 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
         // Auto-verify: edits mark the workspace dirty; running a test clears it.
         if (toolUse.name === "write_file" || toolUse.name === "edit_file") {
           this.pendingVerification = true;
+          this.pendingCritique = true;
         } else if (toolUse.name === "run_shell" && isTestCommand(String((toolUse.input as any)?.command ?? ""))) {
           this.pendingVerification = false;
         }
