@@ -136,6 +136,22 @@ const SNIP_HOT_OVERRIDE = 0.75;
 const MICROCOMPACT_IDLE_MS = 5 * 60 * 1000; // 5 minutes
 const KEEP_RECENT_RESULTS = 3;
 
+// ─── Auto-verify helpers ─────────────────────────────────────
+// A command that "runs a test" — used to decide when edits are considered
+// verified, so the loop knows not to keep nudging.
+const TEST_COMMAND_PATTERN = /(^|\s)(test|tests|pytest|unittest|jest|mocha|vitest|node\s+--test|go\s+test|cargo\s+test|npm\s+(run\s+)?test)(\s|$)/i;
+
+function isTestCommand(command: string): boolean {
+  return TEST_COMMAND_PATTERN.test(command);
+}
+
+// Injected when the model finishes a turn after editing without verifying.
+const VERIFY_PROMPT =
+  "You just changed files but haven't verified them. Run the relevant tests " +
+  "(e.g. `npm test`, `pytest`, or the project's test files) to confirm the " +
+  "changes are correct. If a test fails, fix the code from the error and " +
+  "re-run until it passes. If the project has no runnable tests, say so explicitly.";
+
 // ─── Agent ───────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -183,6 +199,11 @@ export class Agent {
   private maxCostUsd?: number;
   private maxTurns?: number;
   private currentTurns = 0;
+
+  // Auto-verify loop: edits mark the workspace "dirty"; running a test clears
+  // it. If the model finishes a turn while dirty, we nudge it to verify.
+  private pendingVerification = false;
+  private verificationNudges = 0;
 
   // /goal — session-scoped Stop-hook condition, pursued across turns
   private activeGoal: {
@@ -1646,6 +1667,8 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
   }
 
   private async chatAnthropic(userMessage: string): Promise<void> {
+    this.pendingVerification = false;
+    this.verificationNudges = 0;
     this.pushAnthropicUserMessage(userMessage);
     // Auto-compact at turn boundary only — the last message is now plain
     // user text, so the slice in compactAnthropic won't sever a
@@ -1719,6 +1742,14 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
       });
 
       if (toolUses.length === 0) {
+        // Auto-verify: if the model edited files without verifying, nudge it
+        // to run tests instead of stopping. Capped to avoid infinite loops.
+        if (this.pendingVerification && this.verificationNudges < 3 && !this.isSubAgent) {
+          this.pendingVerification = false;
+          this.verificationNudges++;
+          this.anthropicMessages.push({ role: "user", content: VERIFY_PROMPT });
+          continue;
+        }
         if (!this.isSubAgent) {
           printCost(this.totalInputTokens, this.totalOutputTokens, this.totalCacheReadTokens, this.totalCacheCreationTokens);
         }
@@ -1789,6 +1820,12 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
         }
 
         const raw = await this.executeToolCall(toolUse.name, input);
+        // Auto-verify: edits mark the workspace dirty; running a test clears it.
+        if (toolUse.name === "write_file" || toolUse.name === "edit_file") {
+          this.pendingVerification = true;
+        } else if (toolUse.name === "run_shell" && isTestCommand(String((toolUse.input as any)?.command ?? ""))) {
+          this.pendingVerification = false;
+        }
         const res = this.persistLargeResult(toolUse.name, raw);
         printToolResult(toolUse.name, res);
 
