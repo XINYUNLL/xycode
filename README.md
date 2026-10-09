@@ -17,7 +17,7 @@
 ## 它能做什么
 
 - **Agentic loop**：模型「点菜」（要工具），循环「做菜」（执行工具并回喂结果）
-- **自我纠错闭环**：改 → 验证（自动跑测试）→ 评审（Critic 子 agent 审 diff），失败自动迭代
+- **自我纠错闭环**：读（改前先读）→ 改 → 验证（自动跑测试）→ 评审（Critic 子 agent 审 diff），失败自动迭代
 - **工具**：读 / 写 / 编辑文件、列目录、grep 搜索、执行 shell、调用子 agent、MCP 工具等
 - **流式输出** + **并行工具执行** + **prompt 缓存**
 - **4 层上下文压缩**：budget → snip → microcompact → auto-compact
@@ -35,6 +35,7 @@
 - **自建 eval harness**：迷你 SWE-bench，16 道题（合成 / 实现 / bug 三类）、确定性判卷（Node 布尔表达式 + 隐藏测试脚本，不靠 LLM 当裁判），采集解决率 / 轮数 / 成本（`npm run eval`）。
 - **自动验证回路**：改完代码自动运行测试验证，失败则带着报错继续修（写文件标记"未验证"，跑测试命令清除）。
 - **Critic 自审回路**：改完 + 验证后，fork 一个只读评审子 agent 审 `git diff`，发现 bug 就回喂主 agent 继续修——「改 → 测 → 审」三级闭环。
+- **Read-before-write**：改代码前必须先读（`edit_file` 拦截未读过的文件），减少盲改。
 
 ### 修复（Windows 兼容）
 
@@ -43,8 +44,7 @@
 
 ### Roadmap
 
-- [ ] 接入更难的评测实例（真实 SWE-bench 大 repo），量化「自动验证 + Critic」对解决率的提升
-- [ ] Read-before-write：改代码前先强制读全相关上下文
+- [ ] 接入更难的评测实例（真实 SWE-bench 大 repo），量化「读 → 改 → 测 → 审」对解决率的提升
 - [ ] 语义记忆（embedding 检索，替代关键词匹配）
 
 ## 快速开始
