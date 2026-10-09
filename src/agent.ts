@@ -38,7 +38,7 @@ import * as readline from "readline";
 import { randomUUID } from "crypto";
 import { existsSync, readFileSync, mkdirSync, writeFileSync } from "fs";
 import { execFileSync } from "child_process";
-import { join } from "path";
+import { join, resolve } from "path";
 import { homedir } from "os";
 
 // ─── Retry with exponential backoff ──────────────────────────
@@ -215,6 +215,10 @@ export class Agent {
   // Critic self-review: after edits are verified, fork a read-only reviewer.
   private pendingCritique = false;
   private critiqueRounds = 0;
+
+  // Read-before-write: files the agent has read this session. edit_file on a
+  // file not in this set is blocked, so the agent can't blind-edit.
+  private readFiles = new Set<string>();
 
   // /goal — session-scoped Stop-hook condition, pursued across turns
   private activeGoal: {
@@ -563,6 +567,7 @@ export class Agent {
     this.totalCacheReadTokens = 0;
     this.totalCacheCreationTokens = 0;
     this.lastInputTokenCount = 0;
+    this.readFiles.clear();
     printInfo("Conversation cleared.");
   }
 
@@ -1890,7 +1895,24 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
           }
         }
 
+        // Read-before-write: editing a file requires having read it first.
+        if (toolUse.name === "edit_file") {
+          const fp = resolve(String((toolUse.input as any)?.file_path ?? ""));
+          if (fp && !this.readFiles.has(fp)) {
+            toolResults.push({
+              type: "tool_result",
+              tool_use_id: toolUse.id,
+              content: `Blocked: read_file "${(toolUse.input as any)?.file_path}" first, so you know its current content before editing.`,
+            });
+            continue;
+          }
+        }
+
         const raw = await this.executeToolCall(toolUse.name, input);
+        // Read-before-write: remember which files have been read.
+        if (toolUse.name === "read_file") {
+          this.readFiles.add(resolve(String((toolUse.input as any)?.file_path ?? "")));
+        }
         // Auto-verify: edits mark the workspace dirty; running a test clears it.
         if (toolUse.name === "write_file" || toolUse.name === "edit_file") {
           this.pendingVerification = true;
