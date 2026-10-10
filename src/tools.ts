@@ -29,13 +29,21 @@ export const toolDefinitions: ToolDef[] = [
   {
     name: "read_file",
     description:
-      "Read the contents of a file. Returns the file content with line numbers.",
+      "Read the contents of a file, with line numbers. For large files, use offset/limit to read a specific range.",
     input_schema: {
       type: "object" as const,
       properties: {
         file_path: {
           type: "string",
           description: "The path to the file to read",
+        },
+        offset: {
+          type: "number",
+          description: "Line to start reading from (1-indexed, default 1)",
+        },
+        limit: {
+          type: "number",
+          description: "Number of lines to read (default: whole file)",
         },
       },
       required: ["file_path"],
@@ -272,14 +280,20 @@ export function getDeferredToolNames(allTools?: ToolDef[]): string[] {
 
 // ─── Tool execution ─────────────────────────────────────────
 
-function readFile(input: { file_path: string }): string {
+function readFile(input: { file_path: string; offset?: number; limit?: number }): string {
   try {
     const content = readFileSync(input.file_path, "utf-8");
     const lines = content.split("\n");
+    const total = lines.length;
+    const start = input.offset ? Math.max(1, Math.floor(input.offset)) : 1;
+    const count = input.limit ? Math.max(1, Math.floor(input.limit)) : total;
+    const end = Math.min(total, start + count - 1);
     const numbered = lines
-      .map((line, i) => `${String(i + 1).padStart(4)} | ${line}`)
+      .slice(start - 1, end)
+      .map((line, i) => `${String(start + i).padStart(4)} | ${line}`)
       .join("\n");
-    return numbered;
+    const more = end < total ? `\n... (${total - end} more lines)` : "";
+    return `[lines ${start}-${end} of ${total}]\n${numbered}${more}`;
   } catch (e: any) {
     return `Error reading file: ${e.message}`;
   }
@@ -751,7 +765,7 @@ export async function executeTool(
   let result: string;
   switch (name) {
     case "read_file":
-      result = readFile(input as { file_path: string });
+      result = readFile(input as { file_path: string; offset?: number; limit?: number });
       // Track mtime so edit_file/write_file can verify freshness
       if (readFileState && !result.startsWith("Error")) {
         const absPath = resolve(input.file_path);
