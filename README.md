@@ -39,6 +39,7 @@
 - **规划能力**：复杂任务（实现/重构/设计）自动进入 plan mode 先写计划，再执行（plan-then-execute）。
 - **undo/回滚**：写/改文件前自动记录旧内容，`undo_edit` 工具可撤销最近一次编辑（恢复旧版或删除新建文件）。
 - **`read_file` 支持 offset/limit**：读大文件指定行范围（原版只能读整个文件、再被截断开头）。
+- **embedding 语义记忆**：本地 `bge-small-zh` 模型做向量检索召回记忆（设 `XYCODE_EMBED_PYTHON` / `XYCODE_EMBED_SCRIPT` 启用；未设则回退模型召回）。
 
 ### 修复（Windows 兼容）
 
