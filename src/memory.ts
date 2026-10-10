@@ -9,6 +9,7 @@ import { join } from "path";
 import { homedir } from "os";
 import { createHash } from "crypto";
 import { parseFrontmatter, formatFrontmatter } from "./frontmatter.js";
+import { execFileSync } from "child_process";
 
 /** A function that sends a prompt and returns the model's text response. */
 export type SideQueryFn = (system: string, userMessage: string, signal?: AbortSignal) => Promise<string>;
@@ -48,11 +49,15 @@ function getIndexPath(): string {
 // ─── Slugify ────────────────────────────────────────────────
 
 function slugify(text: string): string {
-  return text
+  const slug = text
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
     .replace(/^_|_$/g, "")
     .slice(0, 40);
+  // Non-Latin names (e.g. Chinese) slugify to empty — fall back to a hash so
+  // two Chinese memories don't collide on the same filename.
+  if (slug) return slug;
+  return createHash("sha1").update(text).digest("hex").slice(0, 8);
 }
 
 // ─── CRUD ───────────────────────────────────────────────────
@@ -97,6 +102,13 @@ export function saveMemory(entry: Omit<MemoryEntry, "filename">): string {
   );
   writeFileSync(join(dir, filename), content);
   updateMemoryIndex();
+  // Compute + store the embedding for semantic recall (best-effort).
+  const vec = embedText(`${entry.name} ${entry.description} ${entry.content}`);
+  if (vec) {
+    const embeddings = loadEmbeddings();
+    embeddings[filename] = vec;
+    saveEmbeddings(embeddings);
+  }
   return filename;
 }
 
@@ -105,7 +117,59 @@ export function deleteMemory(filename: string): boolean {
   if (!existsSync(filepath)) return false;
   unlinkSync(filepath);
   updateMemoryIndex();
+  // Remove the stored embedding (best-effort).
+  const embeddings = loadEmbeddings();
+  if (filename in embeddings) {
+    delete embeddings[filename];
+    saveEmbeddings(embeddings);
+  }
   return true;
+}
+
+// ─── Local Embedding (semantic memory) ───────────────────────
+// Uses a local bge-small-zh model via a small Python script. Configure with
+// XYCODE_EMBED_PYTHON (python executable) and XYCODE_EMBED_SCRIPT (path to
+// embed.py). If XYCODE_EMBED_SCRIPT is unset, embedding recall is disabled
+// and the model-based sideQuery remains the only recall path.
+
+const EMBED_PYTHON = process.env.XYCODE_EMBED_PYTHON || "python";
+const EMBED_SCRIPT = process.env.XYCODE_EMBED_SCRIPT || "";
+
+function getEmbeddingsPath(): string {
+  return join(getMemoryDir(), "embeddings.json");
+}
+
+function loadEmbeddings(): Record<string, number[]> {
+  const p = getEmbeddingsPath();
+  if (!existsSync(p)) return {};
+  try { return JSON.parse(readFileSync(p, "utf-8")); } catch { return {}; }
+}
+
+function saveEmbeddings(map: Record<string, number[]>): void {
+  writeFileSync(getEmbeddingsPath(), JSON.stringify(map));
+}
+
+/** Embed text → vector, or null if embedding isn't configured / fails. */
+function embedText(text: string): number[] | null {
+  if (!EMBED_SCRIPT) return null;
+  try {
+    const out = execFileSync(EMBED_PYTHON, [EMBED_SCRIPT, text], {
+      encoding: "utf8",
+      timeout: 60_000,
+      maxBuffer: 10 * 1024 * 1024,
+    });
+    return JSON.parse(out.trim());
+  } catch (err: any) {
+    console.error(`[memory] embedding failed: ${err.message}`);
+    return null;
+  }
+}
+
+/** Cosine similarity. embed.py normalizes vectors, so dot product == cosine. */
+function cosineSimilarity(a: number[], b: number[]): number {
+  let s = 0;
+  for (let i = 0; i < a.length; i++) s += a[i] * b[i];
+  return s;
 }
 
 // ─── Index ──────────────────────────────────────────────────
@@ -281,6 +345,47 @@ export async function selectRelevantMemories(
   }
 }
 
+/**
+ * Select relevant memories by embedding similarity (cosine). Cheaper than the
+ * model-based sideQuery and works offline. Returns [] if embeddings aren't
+ * configured or nothing is similar enough.
+ */
+export function selectRelevantMemoriesByEmbedding(
+  query: string,
+  alreadySurfaced: Set<string>,
+): RelevantMemory[] {
+  const queryVec = embedText(query);
+  if (!queryVec) return [];
+
+  const embeddings = loadEmbeddings();
+  const memories = listMemories();
+
+  const scored: { m: MemoryEntry; score: number }[] = [];
+  for (const m of memories) {
+    if (alreadySurfaced.has(m.filename)) continue;
+    const vec = embeddings[m.filename];
+    if (!vec) continue;
+    scored.push({ m, score: cosineSimilarity(queryVec, vec) });
+  }
+  scored.sort((a, b) => b.score - a.score);
+
+  // Top-K with a minimum similarity threshold (normalized cosine in [-1, 1]).
+  return scored
+    .slice(0, 5)
+    .filter((s) => s.score > 0.35)
+    .map((s) => {
+      const m = s.m;
+      let mtimeMs = 0;
+      try { mtimeMs = statSync(join(getMemoryDir(), m.filename)).mtimeMs; } catch {}
+      return {
+        path: m.filename,
+        content: m.content,
+        mtimeMs,
+        header: `Memory (${memoryAge(mtimeMs)}): ${m.filename}:`,
+      };
+    });
+}
+
 // ─── Prefetch Handle ────────────────────────────────────────
 
 export interface MemoryPrefetch {
@@ -332,7 +437,14 @@ export function startMemoryPrefetch(
   if (!hasMemories) return null;
 
   const handle: MemoryPrefetch = {
-    promise: selectRelevantMemories(query, sideQuery, alreadySurfaced, signal),
+    promise: (async () => {
+      // Hybrid recall: embedding similarity first (cheap, offline), fall back
+      // to the model-based sideQuery when embeddings aren't configured or
+      // nothing is similar enough.
+      const embedded = selectRelevantMemoriesByEmbedding(query, alreadySurfaced);
+      if (embedded.length > 0) return embedded;
+      return selectRelevantMemories(query, sideQuery, alreadySurfaced, signal);
+    })(),
     settled: false,
     consumed: false,
   };
