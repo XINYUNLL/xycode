@@ -1,6 +1,6 @@
 # xycode
 
-一个从零复刻 Claude Code 内核的 coding agent。
+一个基于 claude-code-from-scratch 二次开发的 coding agent，加入自我纠错、本地 embedding 记忆等原创特性。
 
 基于 [claude-code-from-scratch](https://github.com/Windy3f3f3f3f/claude-code-from-scratch)（MIT License）二次开发：在读懂内核的基础上，加入自己的原创特性，并用数据验证它们的价值。
 
@@ -10,7 +10,7 @@
 
 不是「又一个 Claude Code 克隆」，而是三件事：
 
-1. **搞懂内核** —— 从零实现 agent loop、流式输出、上下文压缩、工具调用、权限、子 agent、MCP；
+1. **搞懂内核** —— 读懂 agent loop、流式输出、上下文压缩、工具调用、权限、子 agent、MCP 这些核心机制；
 2. **加自己的东西** —— 加入原版没有的原创特性；
 3. **用数据验证** —— 用自建 eval 量化每个改动的价值。
 
