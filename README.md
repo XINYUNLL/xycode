@@ -37,6 +37,7 @@
 - **Critic 自审回路**：改完 + 验证后，fork 一个只读评审子 agent 审 `git diff`，发现 bug 就回喂主 agent 继续修——「改 → 测 → 审」三级闭环。
 - **Read-before-write**：改代码前必须先读（`edit_file` 拦截未读过的文件），减少盲改。
 - **规划能力**：复杂任务（实现/重构/设计）自动进入 plan mode 先写计划，再执行（plan-then-execute）。
+- **undo/回滚**：写/改文件前自动记录旧内容，`undo_edit` 工具可撤销最近一次编辑（恢复旧版或删除新建文件）。
 
 ### 修复（Windows 兼容）
 
