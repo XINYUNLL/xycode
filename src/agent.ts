@@ -36,7 +36,7 @@ import {
 } from "./autonomy.js";
 import * as readline from "readline";
 import { randomUUID } from "crypto";
-import { existsSync, readFileSync, mkdirSync, writeFileSync } from "fs";
+import { existsSync, readFileSync, mkdirSync, writeFileSync, rmSync } from "fs";
 import { execFileSync } from "child_process";
 import { join, resolve } from "path";
 import { homedir } from "os";
@@ -170,6 +170,15 @@ function shouldAutoPlan(message: string): boolean {
   return COMPLEX_TASK_KEYWORDS.test(message);
 }
 
+// ─── Undo tool ───────────────────────────────────────────────
+// Exposed only to the main agent: reverts the most recent file edit by
+// restoring the pre-edit content captured before that edit.
+const UNDO_EDIT_TOOL: ToolDef = {
+  name: "undo_edit",
+  description: "Revert the most recent file edit (write_file or edit_file). Use this when a change was wrong and you need to undo it. Call repeatedly to undo multiple edits.",
+  input_schema: { type: "object", properties: {} },
+};
+
 // ─── Agent ───────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -230,6 +239,10 @@ export class Agent {
   // Read-before-write: files the agent has read this session. edit_file on a
   // file not in this set is blocked, so the agent can't blind-edit.
   private readFiles = new Set<string>();
+
+  // Undo/rollback: history of file edits (pre-edit content captured before
+  // each write_file/edit_file), so undo_edit can revert the latest change.
+  private editHistory: { filePath: string; existedBefore: boolean; oldContent: string | null }[] = [];
 
   // /goal — session-scoped Stop-hook condition, pursued across turns
   private activeGoal: {
@@ -314,6 +327,7 @@ export class Agent {
     this.useOpenAI = !!options.apiBase;
     this.isSubAgent = options.isSubAgent || false;
     this.tools = options.customTools || toolDefinitions;
+    if (!this.isSubAgent) this.tools = [...this.tools, UNDO_EDIT_TOOL];
     this.maxCostUsd = options.maxCostUsd;
     this.maxTurns = options.maxTurns;
     this.confirmFn = options.confirmFn;
@@ -1460,6 +1474,7 @@ export class Agent {
     if (name === "enter_plan_mode" || name === "exit_plan_mode") return await this.executePlanModeTool(name);
     if (name === "agent") return this.executeAgentTool(input);
     if (name === "skill") return this.executeSkillTool(input);
+    if (name === "undo_edit") return this.undoLastEdit();
     if (name === "schedule_wakeup") {
       // Only the internal dynamic-loop driver may route here; outside a dynamic
       // loop the tool isn't exposed, and this guard keeps a stray call (or a
@@ -1470,6 +1485,19 @@ export class Agent {
     // Route MCP tool calls to the MCP manager
     if (this.mcpManager.isMcpTool(name)) return this.mcpManager.callTool(name, input);
     return executeTool(name, input, this.readFileState);
+  }
+
+  // ─── Undo / rollback ───────────────────────────────────────
+  private undoLastEdit(): string {
+    const last = this.editHistory.pop();
+    if (!last) return "Nothing to undo (no file edits in this session).";
+    if (last.existedBefore && last.oldContent !== null) {
+      writeFileSync(last.filePath, last.oldContent);
+      return `Undid the last edit to ${last.filePath} (restored previous content).`;
+    } else {
+      rmSync(last.filePath, { force: true });
+      return `Undid the last edit to ${last.filePath} (removed the newly-created file).`;
+    }
   }
 
   // ─── Skill fork mode ─────────────────────────────────────
@@ -1925,6 +1953,19 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
               content: `Blocked: read_file "${(toolUse.input as any)?.file_path}" first, so you know its current content before editing.`,
             });
             continue;
+          }
+        }
+
+        // Undo/rollback: capture pre-edit content so undo_edit can revert.
+        if (toolUse.name === "write_file" || toolUse.name === "edit_file") {
+          const fp = resolve(String((toolUse.input as any)?.file_path ?? ""));
+          if (fp) {
+            const existed = existsSync(fp);
+            this.editHistory.push({
+              filePath: fp,
+              existedBefore: existed,
+              oldContent: existed ? readFileSync(fp, "utf-8") : null,
+            });
           }
         }
 
