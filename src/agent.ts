@@ -159,6 +159,17 @@ const CRITIC_SYSTEM_PROMPT =
   "edge cases, correctness issues, and missing error handling. Be concrete — " +
   'point to exact lines and explain why. If the change is correct, reply with exactly "APPROVED".';
 
+// ─── Auto-plan heuristic ────────────────────────────────────
+// A "complex" task should be planned before executing (plan-then-execute):
+// implementation / refactor / design tasks, or long multi-part messages.
+const COMPLEX_TASK_KEYWORDS = /implement|refactor|rewrite|restructure|migrate|\bdesign\b|\bbuild\b|add (a |an )?(new )?feature|实现|重构|重写|设计|搭建|迁移|开发/i;
+
+function shouldAutoPlan(message: string): boolean {
+  if (!message) return false;
+  if (message.length > 400) return true;
+  return COMPLEX_TASK_KEYWORDS.test(message);
+}
+
 // ─── Agent ───────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -497,6 +508,15 @@ export class Agent {
   }
 
   async chat(userMessage: string): Promise<void> {
+    // Auto-plan-first: complex tasks (implement/refactor/design) start in plan
+    // mode so the agent explores and writes a plan before editing. The
+    // exit_plan_mode tool restores the original mode when the plan is ready.
+    if (!this.isSubAgent && this.permissionMode !== "plan" && shouldAutoPlan(userMessage)) {
+      this.prePlanMode = this.permissionMode;
+      this.permissionMode = "plan";
+      this.planFilePath = this.generatePlanFilePath();
+      printInfo("Auto plan mode: complex task detected — planning first.");
+    }
     // Lazily connect to MCP servers on first chat (main agent only)
     if (!this.mcpInitialized && !this.isSubAgent) {
       this.mcpInitialized = true;
