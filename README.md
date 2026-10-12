@@ -40,6 +40,7 @@
 - **`read_file` 支持 offset/limit**：读大文件指定行范围（原版只能读整个文件、再被截断开头）。
 - **embedding 语义记忆**：本地 `bge-small-zh` 模型做向量检索召回记忆（设 `XYCODE_EMBED_PYTHON` / `XYCODE_EMBED_SCRIPT` 启用；未设则回退模型召回）。
 - **TodoWrite 任务清单**：`todo_write` 工具让 agent 维护打勾清单，复杂任务时规划步骤、逐步勾掉（轻量规划，不阻塞编辑）。
+- **并行探索子 agent**：`parallel_explore` 工具把一个探索问题拆成若干子问题，fork 多个只读 explore 子 agent **并行**搜代码库、再合并成带 `file:line` 的摘要——改代码前先并行摸清代码库，而不是串行读文件。
 - **A/B 对照开关**：`--baseline` 参数一键关掉整条自我纠错链（read-before-write / 自动验证 / Critic 评审 / undo / todo），用于量化这些特性到底带来多少解决率提升——否则无法证明「不是白加的」。
 
 ### 修复（Windows 兼容）

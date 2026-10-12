@@ -194,6 +194,29 @@ const TODO_WRITE_TOOL: ToolDef = {
   },
 };
 
+// ─── Parallel explore tool ──────────────────────────────────
+// Exposed only to the main agent: forks several read-only "explore" sub-agents
+// in parallel (one per sub-question) and merges their findings. Lets the agent
+// fan out codebase investigation across many files concurrently — Claude Code's
+// Explore pattern — instead of reading them one at a time.
+const PARALLEL_EXPLORE_TOOL: ToolDef = {
+  name: "parallel_explore",
+  description: "Investigate several sub-questions about the codebase in parallel using read-only sub-agents, then return a merged summary with file:line references. Use this to explore efficiently before making changes — the sub-questions run concurrently.",
+  input_schema: {
+    type: "object",
+    properties: {
+      queries: {
+        type: "array",
+        items: { type: "string", description: "One sub-question to investigate" },
+        description: "Sub-questions to investigate in parallel (max 6).",
+      },
+    },
+    required: ["queries"],
+  },
+};
+
+const MAX_PARALLEL_EXPLORE = 6;
+
 // ─── Agent ───────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -353,7 +376,13 @@ export class Agent {
     this.isSubAgent = options.isSubAgent || false;
     this.selfCorrection = options.selfCorrection ?? true;
     this.tools = options.customTools || toolDefinitions;
-    if (!this.isSubAgent && this.selfCorrection) this.tools = [...this.tools, UNDO_EDIT_TOOL, TODO_WRITE_TOOL];
+    if (!this.isSubAgent) {
+      // Parallel exploration is a general capability (not self-correction), so
+      // it's always on; undo/todo are gated behind the self-correction switch
+      // for A/B measurement.
+      this.tools = [...this.tools, PARALLEL_EXPLORE_TOOL];
+      if (this.selfCorrection) this.tools = [...this.tools, UNDO_EDIT_TOOL, TODO_WRITE_TOOL];
+    }
     this.maxCostUsd = options.maxCostUsd;
     this.maxTurns = options.maxTurns;
     this.confirmFn = options.confirmFn;
@@ -1493,6 +1522,7 @@ export class Agent {
     if (name === "skill") return this.executeSkillTool(input);
     if (name === "undo_edit") return this.undoLastEdit();
     if (name === "todo_write") return this.todoWrite((input.items as any[]) || []);
+    if (name === "parallel_explore") return this.parallelExplore((input.queries as string[]) || []);
     if (name === "schedule_wakeup") {
       // Only the internal dynamic-loop driver may route here; outside a dynamic
       // loop the tool isn't exposed, and this guard keeps a stray call (or a
@@ -1769,6 +1799,45 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
       printSubAgentEnd("critic", "code review");
       return null;
     }
+  }
+
+  // ─── Parallel explore ───────────────────────────────────────
+  // Fork one read-only "explore" sub-agent per sub-question, run them all in
+  // parallel, then merge their findings. Fanning out exploration is where a
+  // single agent is slowest (it reads files serially), so this parallelizes the
+  // read-only investigation phase before the main agent edits anything.
+  private async parallelExplore(queries: string[]): Promise<string> {
+    const capped = queries.slice(0, MAX_PARALLEL_EXPLORE);
+    if (capped.length === 0) return "No sub-questions provided.";
+
+    const config = getSubAgentConfig("explore");
+    printSubAgentStart("parallel-explore", `${capped.length} sub-questions`);
+
+    const runOne = async (q: string): Promise<{ q: string; text: string }> => {
+      const explorer = new Agent({
+        model: this.model,
+        apiBase: this.useOpenAI ? this.openaiClient?.baseURL : undefined,
+        isSubAgent: true,
+        permissionMode: "bypassPermissions",
+        customSystemPrompt: config.systemPrompt,
+        customTools: config.tools,
+      });
+      try {
+        const result = await explorer.runOnce(q);
+        this.totalInputTokens += result.tokens.input;
+        this.totalOutputTokens += result.tokens.output;
+        return { q, text: result.text || "(no findings)" };
+      } catch (e: any) {
+        return { q, text: `(explore error: ${e.message})` };
+      }
+    };
+
+    const results = await Promise.all(capped.map(runOne));
+    printSubAgentEnd("parallel-explore", `${capped.length} sub-questions`);
+
+    return results
+      .map((r, i) => `## ${i + 1}. ${r.q}\n${r.text.trim()}`)
+      .join("\n\n");
   }
 
   // ─── Anthropic backend ───────────────────────────────────────
