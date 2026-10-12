@@ -2,6 +2,8 @@
 
 一个基于 claude-code-from-scratch 二次开发的 coding agent，加入自我纠错、本地 embedding 记忆等原创特性。
 
+基于 [claude-code-from-scratch](https://github.com/Windy3f3f3f3f/claude-code-from-scratch)（MIT License）二次开发：在读懂内核的基础上，加入自己的原创特性，并用数据验证它们的价值。
+
 > ⚖️ 声明：本项目是学习 / 二次开发项目，"Claude Code" 是 Anthropic 的商标，本项目与 Anthropic 无关联。
 
 ## 定位
@@ -15,7 +17,7 @@
 ## 它能做什么
 
 - **Agentic loop**：模型「点菜」（要工具），循环「做菜」（执行工具并回喂结果）
-- **成熟 agent 行为链**：规划（复杂任务先计划）→ 读（改前先读）→ 改 → 验证（自动跑测试）→ 评审（Critic 子 agent 审 diff），失败自动迭代
+- **成熟 agent 行为链**：读（改前先读）→ 改 → 验证（自动跑测试）→ 评审（Critic 子 agent 审 diff），失败自动迭代
 - **工具**：读 / 写 / 编辑文件、列目录、grep 搜索、执行 shell、调用子 agent、MCP 工具等
 - **流式输出** + **并行工具执行** + **prompt 缓存**
 - **4 层上下文压缩**：budget → snip → microcompact → auto-compact
@@ -34,7 +36,6 @@
 - **自动验证回路**：改完代码自动运行测试验证，失败则带着报错继续修（写文件标记"未验证"，跑测试命令清除）。
 - **Critic 自审回路**：改完 + 验证后，fork 一个只读评审子 agent 审 `git diff`，发现 bug 就回喂主 agent 继续修——「改 → 测 → 审」三级闭环。
 - **Read-before-write**：改代码前必须先读（`edit_file` 拦截未读过的文件），减少盲改。
-- **规划能力**：复杂任务（实现/重构/设计）自动进入 plan mode 先写计划，再执行（plan-then-execute）。
 - **undo/回滚**：写/改文件前自动记录旧内容，`undo_edit` 工具可撤销最近一次编辑（恢复旧版或删除新建文件）。
 - **`read_file` 支持 offset/limit**：读大文件指定行范围（原版只能读整个文件、再被截断开头）。
 - **embedding 语义记忆**：本地 `bge-small-zh` 模型做向量检索召回记忆（设 `XYCODE_EMBED_PYTHON` / `XYCODE_EMBED_SCRIPT` 启用；未设则回退模型召回）。
@@ -47,7 +48,6 @@
 ### Roadmap
 
 - [ ] 接入更难的评测实例（真实 SWE-bench 大 repo），量化「读 → 改 → 测 → 审」对解决率的提升
-- [ ] 语义记忆（embedding 检索，替代关键词匹配）
 
 ## 快速开始
 
