@@ -168,6 +168,32 @@ const UNDO_EDIT_TOOL: ToolDef = {
   input_schema: { type: "object", properties: {} },
 };
 
+// ─── Todo tool ───────────────────────────────────────────────
+// Exposed only to the main agent: maintains a task checklist for multi-step
+// work, so the agent can plan steps and check them off as it completes them.
+const TODO_WRITE_TOOL: ToolDef = {
+  name: "todo_write",
+  description: "Maintain a task checklist to track progress on multi-step tasks. Break a complex task into concrete steps, mark them in_progress while working, and completed when done. Call at the start of a complex task and whenever the list changes.",
+  input_schema: {
+    type: "object",
+    properties: {
+      items: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            content: { type: "string", description: "The task description" },
+            status: { type: "string", enum: ["pending", "in_progress", "completed"], description: "Task status" },
+          },
+          required: ["content", "status"],
+        },
+        description: "The full todo list",
+      },
+    },
+    required: ["items"],
+  },
+};
+
 // ─── Agent ───────────────────────────────────────────────────
 
 interface AgentOptions {
@@ -232,6 +258,10 @@ export class Agent {
   // Undo/rollback: history of file edits (pre-edit content captured before
   // each write_file/edit_file), so undo_edit can revert the latest change.
   private editHistory: { filePath: string; existedBefore: boolean; oldContent: string | null }[] = [];
+
+  // Todo list (todo_write tool): the agent's task checklist for the current
+  // multi-step task.
+  private todos: { content: string; status: string }[] = [];
 
   // /goal — session-scoped Stop-hook condition, pursued across turns
   private activeGoal: {
@@ -316,7 +346,7 @@ export class Agent {
     this.useOpenAI = !!options.apiBase;
     this.isSubAgent = options.isSubAgent || false;
     this.tools = options.customTools || toolDefinitions;
-    if (!this.isSubAgent) this.tools = [...this.tools, UNDO_EDIT_TOOL];
+    if (!this.isSubAgent) this.tools = [...this.tools, UNDO_EDIT_TOOL, TODO_WRITE_TOOL];
     this.maxCostUsd = options.maxCostUsd;
     this.maxTurns = options.maxTurns;
     this.confirmFn = options.confirmFn;
@@ -1455,6 +1485,7 @@ export class Agent {
     if (name === "agent") return this.executeAgentTool(input);
     if (name === "skill") return this.executeSkillTool(input);
     if (name === "undo_edit") return this.undoLastEdit();
+    if (name === "todo_write") return this.todoWrite((input.items as any[]) || []);
     if (name === "schedule_wakeup") {
       // Only the internal dynamic-loop driver may route here; outside a dynamic
       // loop the tool isn't exposed, and this guard keeps a stray call (or a
@@ -1478,6 +1509,17 @@ export class Agent {
       rmSync(last.filePath, { force: true });
       return `Undid the last edit to ${last.filePath} (removed the newly-created file).`;
     }
+  }
+
+  // ─── Todo list ─────────────────────────────────────────────
+  private todoWrite(items: { content: string; status: string }[]): string {
+    this.todos = items;
+    if (items.length === 0) return "Todo list cleared.";
+    const lines = items.map((t, i) => {
+      const mark = t.status === "completed" ? "[x]" : t.status === "in_progress" ? "[>]" : "[ ]";
+      return `${mark} ${i + 1}. ${t.content}`;
+    });
+    return "Todo list:\n" + lines.join("\n");
   }
 
   // ─── Skill fork mode ─────────────────────────────────────
