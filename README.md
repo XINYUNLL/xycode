@@ -79,6 +79,31 @@ xycode                            # 交互式 REPL
 
 完整参数见 `xycode --help`。
 
+## 评测
+
+### 自建 eval harness（16 题，确定性判卷）
+
+```bash
+npm run eval
+```
+
+16 道题（10 合成 / 3 实现 / 3 bug），用 Node 布尔表达式 + 隐藏测试脚本判卷，不靠 LLM 当裁判。
+
+结果：**16/16 = 100%**。
+
+### SWE-bench（真实 GitHub issue）
+
+在 Windows 上跑通了 SWE-bench 官方 harness（修了 3 个跨平台 bug：CRLF、resume 复用旧日志、GBK 编码），评测脚本在仓库外的 `../swebench/` 目录。
+
+| 子集 | 解决率 |
+|---|---|
+| flask / requests（8 实例，简单） | 8/8 = 100% |
+| scikit-learn（9 实例，中等） | 8/9 ≈ 88.9% |
+
+### 一条诚实的结论
+
+当前 relay 模型（DeepSeek-v4-pro，前沿水平）在自包含任务和简单 SWE-bench 实例上几乎全对，解决率没有区分度；scikit-learn 才掉到 88.9%（其中 1 个是稳定复现的真失败）。要量化「自我纠错」等特性的价值，需要换更难的 django / sympy 实例做 A/B 对比——这正是 Roadmap 里下一步要做的事。
+
 ## 致谢
 
 本项目基于 [Windy3f3f3f3f/claude-code-from-scratch](https://github.com/Windy3f3f3f3f/claude-code-from-scratch)，其 13 章分步教程完整保留在 [`docs/`](./docs) 目录，每一章都能一条命令跑起来、无需 API key。
