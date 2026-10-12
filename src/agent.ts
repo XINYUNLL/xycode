@@ -206,6 +206,7 @@ interface AgentOptions {
   thinking?: boolean;
   maxCostUsd?: number;        // Budget: max USD spend
   maxTurns?: number;          // Budget: max agentic turns
+  selfCorrection?: boolean;   // Enable the self-correction loop (read→edit→verify→review). Default true.
   confirmFn?: (message: string) => Promise<boolean>; // External confirmation callback
   // Sub-agent options
   customSystemPrompt?: string;
@@ -250,6 +251,11 @@ export class Agent {
   // Critic self-review: after edits are verified, fork a read-only reviewer.
   private pendingCritique = false;
   private critiqueRounds = 0;
+
+  // Master switch for the self-correction loop (read→edit→verify→review) plus
+  // the undo/todo tools. Set false (--baseline) to strip all of it for A/B
+  // measurement — so we can quantify how much these features actually buy.
+  private selfCorrection: boolean;
 
   // Read-before-write: files the agent has read this session. edit_file on a
   // file not in this set is blocked, so the agent can't blind-edit.
@@ -345,8 +351,9 @@ export class Agent {
     this.thinkingMode = this.resolveThinkingMode();
     this.useOpenAI = !!options.apiBase;
     this.isSubAgent = options.isSubAgent || false;
+    this.selfCorrection = options.selfCorrection ?? true;
     this.tools = options.customTools || toolDefinitions;
-    if (!this.isSubAgent) this.tools = [...this.tools, UNDO_EDIT_TOOL, TODO_WRITE_TOOL];
+    if (!this.isSubAgent && this.selfCorrection) this.tools = [...this.tools, UNDO_EDIT_TOOL, TODO_WRITE_TOOL];
     this.maxCostUsd = options.maxCostUsd;
     this.maxTurns = options.maxTurns;
     this.confirmFn = options.confirmFn;
@@ -1875,7 +1882,7 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
       if (toolUses.length === 0) {
         // Auto-verify: if the model edited files without verifying, nudge it
         // to run tests instead of stopping. Capped to avoid infinite loops.
-        if (this.pendingVerification && this.verificationNudges < 3 && !this.isSubAgent) {
+        if (this.selfCorrection && this.pendingVerification && this.verificationNudges < 3 && !this.isSubAgent) {
           this.pendingVerification = false;
           this.verificationNudges++;
           this.anthropicMessages.push({ role: "user", content: VERIFY_PROMPT });
@@ -1884,7 +1891,7 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
         // Critic self-review: after edits are verified (or no tests exist),
         // fork a read-only reviewer. If it finds issues, feed them back for
         // another pass. Capped at one round to keep cost bounded.
-        if (this.pendingCritique && this.critiqueRounds < 1 && !this.isSubAgent) {
+        if (this.selfCorrection && this.pendingCritique && this.critiqueRounds < 1 && !this.isSubAgent) {
           this.pendingCritique = false;
           this.critiqueRounds++;
           const review = await this.runCritic(userMessage);
@@ -1966,7 +1973,7 @@ IMPORTANT: When your plan is complete, you MUST call exit_plan_mode. Do NOT ask 
         }
 
         // Read-before-write: editing a file requires having read it first.
-        if (toolUse.name === "edit_file") {
+        if (this.selfCorrection && toolUse.name === "edit_file") {
           const fp = resolve(String((toolUse.input as any)?.file_path ?? ""));
           if (fp && !this.readFiles.has(fp)) {
             toolResults.push({

@@ -18,6 +18,7 @@ interface ParsedArgs {
   prompt?: string;
   resume?: boolean;
   thinking?: boolean;
+  baseline?: boolean;
   maxCost?: number;
   maxTurns?: number;
 }
@@ -26,6 +27,7 @@ function parseArgs(): ParsedArgs {
   const args = process.argv.slice(2);
   let permissionMode: PermissionMode = "default";
   let thinking = false;
+  let baseline = false;
   let model = process.env.XYCODE_MODEL || "claude-opus-4-6";
   let apiBase: string | undefined;
   let resume = false;
@@ -46,6 +48,8 @@ function parseArgs(): ParsedArgs {
       permissionMode = "auto";
     } else if (args[i] === "--thinking") {
       thinking = true;
+    } else if (args[i] === "--baseline") {
+      baseline = true;
     } else if (args[i] === "--model" || args[i] === "-m") {
       model = args[++i] || model;
     } else if (args[i] === "--api-base") {
@@ -69,6 +73,8 @@ Options:
   --dont-ask          Auto-deny anything needing confirmation (for CI)
   --auto              Auto Mode: an LLM classifier judges each action instead of asking
   --thinking          Enable extended thinking (Anthropic only)
+  --baseline          Disable self-correction (read-before-write, auto-verify,
+                      Critic review, undo, todo) for A/B comparison
   --model, -m         Model to use (default: claude-opus-4-6, or XYCODE_MODEL env)
   --api-base URL      Use OpenAI-compatible API endpoint (key via env var)
   --resume            Resume the last session
@@ -112,6 +118,7 @@ Examples:
     thinking,
     maxCost,
     maxTurns,
+    baseline,
     prompt: positional.length > 0 ? positional.join(" ") : undefined,
   };
 }
@@ -366,7 +373,7 @@ function loadEnvFile(): void {
 
 async function main() {
   loadEnvFile();
-  const { permissionMode, model, apiBase, prompt, resume, thinking, maxCost, maxTurns } = parseArgs();
+  const { permissionMode, model, apiBase, prompt, resume, thinking, baseline, maxCost, maxTurns } = parseArgs();
 
   // Resolve API config from env vars (API keys only via env, not CLI)
   let resolvedApiBase = apiBase;
@@ -405,6 +412,7 @@ async function main() {
 
   const agent = new Agent({
     permissionMode, model, thinking, maxCostUsd: maxCost, maxTurns,
+    selfCorrection: !baseline,
     apiBase: resolvedUseOpenAI ? resolvedApiBase : undefined,
     anthropicBaseURL: !resolvedUseOpenAI ? resolvedApiBase : undefined,
     apiKey: resolvedApiKey,
