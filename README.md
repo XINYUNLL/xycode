@@ -4,6 +4,8 @@
 
 基于 [claude-code-from-scratch](https://github.com/Windy3f3f3f3f/claude-code-from-scratch)（MIT License）二次开发：在读懂内核的基础上，加入自己的原创特性，并用数据验证它们的价值。
 
+📖 系统架构见 [`docs/architecture.md`](./docs/architecture.md)。
+
 > ⚖️ 声明：本项目是学习 / 二次开发项目，"Claude Code" 是 Anthropic 的商标，本项目与 Anthropic 无关联。
 
 ## 定位
